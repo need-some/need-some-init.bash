@@ -1,0 +1,175 @@
+#!/bin/bash
+
+export NEEDSOME_LASTSTAT=
+export NEEDSOME_LASTLEVEL=
+export NEEDSOME_LASTINFO=
+export NEEDSOME_REPORT=
+
+init_extended_status() {
+	if { true >&3; } 2> /dev/null; then
+		export NEEDSOME_EXTENDEDSTATUS=1
+		_debug extended status already set
+	else
+		export NEEDSOME_EXTENDEDSTATUS=0
+		exec 3>&1
+		_debug extended status  set, redirect 3
+	fi
+}
+
+close_extended_status() {
+	if [ "$NEEDSOME_EXTENDEDSTATUS" = 1 ]; then
+		echo "[extended status]"
+		echo "[status] $NEEDSOME_LASTSTAT"
+		echo "[level] $NEEDSOME_LASTLEVEL"
+		echo "[info] $NEEDSOME_LASTINFO"
+		echo "$NEEDSOME_REPORT" | while read line; do
+			if [ ! -z "$line" ]; then
+				echo "[report] $line"
+			fi
+		done
+		_debug "return extended status $NEEDSOME_LASTSTAT $NEEDSOME_LASTLEVEL"
+	else
+		echo -e "$(write_extended_status)"
+		_debug "write extended status $NEEDSOME_LASTSTAT $NEEDSOME_LASTLEVEL to stdout"
+	fi
+}
+
+set_extended_status() {
+	NEEDSOME_LASTSTAT="$2"
+	if [ -z "$NEEDSOME_LASTSTAT" ]; then
+		NEEDSOME_LASTSTAT="$(echo $1 | tr "A-Z" "a-z")"
+	fi
+	NEEDSOME_LASTLEVEL="$1"
+	NEEDSOME_LASTINFO="$3"
+}
+
+write_extended_status() {
+	if [ "$NEEDSOME_LASTLEVEL" = "OK" ]; then
+		color=$GREEN
+	elif [ "$NEEDSOME_LASTLEVEL" = "WARN" ]; then
+		color=$YELLOW
+	elif [ "$NEEDSOME_LASTLEVEL" = "SKIP" ]; then
+		color=$GRAY
+	elif [ "$NEEDSOME_LASTLEVEL" = "INFO" ]; then
+		color=$BLUE
+	else
+		color=$RED
+	fi
+	echo "[${color}${NEEDSOME_LASTSTAT}${NORMAL}] $NEEDSOME_LASTINFO"
+}
+
+call_extended_status() {
+	cmd=execute_extended_status
+	cmdsok=0
+	while [ "$cmdsok" != "1" ]; do
+		if [ "$1" = "--wrap" ]; then
+			cmd=wrapexec_extended_status
+			shift
+		elif [ "$1" = "--keep" ]; then
+			keep=keep
+			shift
+		else
+			cmdsok=1
+		fi
+	done
+	name="$1"
+	if [ -z "$keep" ]; then
+		echo "$name"
+		echo 
+	fi
+	shift
+
+	$cmd "$@"
+
+	lvl=$?
+	if [ -z "$keep" ]; then
+		#TODO: subreport
+		NEEDSOME_REPORT="$NEEDSOME_REPORT
+$name	$(write_extended_status)"
+
+		NEEDSOME_LASTSTAT=
+		NEEDSOME_LASTLEVEL=
+		echo
+	elif [ "$NEEDSOME_EXTENDEDSTATUS" = 1 ]; then
+		echo "[extended status]"
+		echo "[subcall] "
+	fi
+	return $lvl
+}
+
+report_extended_status() {
+	echo -e "${NEEDSOME_REPORT}" | expand -t 50
+	NEEDSOME_REPORT=
+}
+
+execute_extended_status() {
+	NEEDSOME_LASTSTAT=
+	NEEDSOME_LASTLEVEL=
+	_debug "execute $@"
+	if { true >&3; } 2> /dev/null; then
+		_debug extended status already set
+	else
+		exec 3>&1
+		_debug extended status  set, redirect 3
+	fi
+	output="$(
+		"$@"
+	)"
+	lvl=$?
+	_debug "returned from $@ $lvl"
+
+#	if [ "$(echo "$output" | head -n 1 )" = "[extended status]" ]; then
+	if ( echo "$output" | grep "[extended status]" > /dev/null ); then
+		NEEDSOME_LASTSTAT="$(echo "$output" | grep -F "[status]" | cut -d "]" -f 2- | xargs )"
+		NEEDSOME_LASTLEVEL="$(echo "$output" | grep -F "[level]" | cut -d "]" -f 2- | xargs )"
+		NEEDSOME_LASTINFO="$(echo "$output" | grep -F "[info]" | cut -d "]" -f 2- | xargs )"
+		_debug "extended result found"
+		_debug "$output"
+	else
+		echo "$output"
+		_debug "normal output"
+		_debug "$output"
+	fi
+	if [ "$NEEDSOME_LASTLEVEL" = "" ]; then
+		if [ "$lvl" -eq 0 ]; then
+			NEEDSOME_LASTLEVEL="OK"
+		else
+			NEEDSOME_LASTLEVEL="ERROR"
+		fi
+	fi
+	if [ "$NEEDSOME_LASTSTAT" = "" ]; then
+		if [ "$lvl" -eq 0 ]; then
+			NEEDSOME_LASTSTAT="ok"
+		else
+			NEEDSOME_LASTSTAT="error"
+		fi
+	fi
+
+	return $lvl
+}
+
+wrapexec_extended_status() {
+	if { true >&3; } 2> /dev/null; then
+		_debug extended status already set
+	else
+		exec 3>&1
+		_debug extended status  set, redirect 3
+	fi
+	output="$(
+		"$@" | tee >(cat - >&3)
+		exit ${PIPESTATUS[0]}
+	)"
+	lvl=$?
+
+	if [ "$lvl" -eq 0 ]; then
+		NEEDSOME_LASTLEVEL="OK"
+		NEEDSOME_LASTSTAT="ok"
+	else
+		NEEDSOME_LASTLEVEL="ERROR"
+		NEEDSOME_LASTSTAT="error"
+	fi
+
+	return $lvl
+}
+
+

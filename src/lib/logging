@@ -1,0 +1,40 @@
+export LEVEL_TRACE=0
+export LEVEL_DEBUG=1
+export LEVEL_NOTICE=2
+export LEVEL_INFO=3
+export LEVEL_WARN=4
+export LEVEL_ERROR=5
+
+export LEVEL_NAMES=(TRACE DEBUG NOTICE INFO WARN ERROR)
+
+export LEVEL_DEFAULT=4
+
+function _loglevel() {
+	if [ -z $NEEDSOME_LOGLEVEL ]; then
+		NEEDSOME_LOGLEVEL=$LEVEL_DEFAULT
+	fi
+	if [ $NEEDSOME_LOGLEVEL -le $1 ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+function _log() {
+	level=$1
+	shift
+	if ( _loglevel $level ); then
+		if [ ! -d ~/var/log/ ]; then
+			mkdir -p ~/var/log/
+		fi
+		prefix="$(date +%Y%m%d-%H%M%S) [${LEVEL_NAMES[$level]}]"
+		echo "$@" | while read line; do 
+			echo "$prefix $line"
+		done >> ~/var/log/needsome.log
+	fi
+}
+
+function _debug() {
+	_log $LEVEL_DEBUG "$@"
+}
+

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [ "$ISTERM" = "" ]; then
+	ISTERM="$1"
+fi
+
+if [ -t 1 ]; then
+	ISTERM="--force-term"
+fi
+
+if [ "$ISTERM" = "--force-term" ]; then
+	ESC="\033["
+	LOW="0;"
+	HIGH="1;"
+	export DARKRED="${ESC}${LOW}31m"
+	export RED="${ESC}${HIGH}31m"
+	export GREEN="${ESC}${HIGH}32m"
+	export YELLOW="${ESC}${HIGH}33m"
+	export BLUE="${ESC}${HIGH}34m"
+	export VIOLET="${ESC}${HIGH}35m"
+	export CYAN="${ESC}${HIGH}36m"
+	export GRAY="${ESC}${HIGH}37m"
+	export BLACK="${ESC}${LOW}30m"
+	export NORMAL="${ESC}0m"
+fi
+
+
