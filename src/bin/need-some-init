@@ -3,14 +3,25 @@ if [ -z "$NEEDSOME_HOME" ]; then
 	export NEEDSOME_HOME=/usr/local/lib/need-some
 fi
 
-. ${NEEDSOME_HOME}/need-some-init.bash/lib/logging
-. ${NEEDSOME_HOME}/need-some-init.bash/lib/colored
-. ${NEEDSOME_HOME}/need-some-init.bash/lib/extended-status
+if [ -z "$NEEDSOME_INIT_HOME" ]; then
+	export NEEDSOME_INIT_HOME="${NEEDSOME_HOME}/need-some-init.bash/"
+fi
 
-for m in $(ls "$NEEDSOME_HOME" | grep -e "need-some-[^-]*.bash" | sed -e 's/need-some-\(.*\)\.bash/\1/' ); do
-	var="NEEDSOME_$(echo "$m" | tr "a-z" "A-Z")_HOME"
-	if [ ! -v "$var" ]; then
-		export "$var"=${NEEDSOME_HOME}/need-some-"$m".bash/
-	fi
-done
+__SCRIPTSOURCE="$(readlink -f "${BASH_SOURCE[0]}")"
+__NEEDSOME_HOME_SCRIPTSOURCE="$(readlink -f "$NEEDSOME_INIT_HOME/bin/need-some-init")"
+
+if [ "$__SCRIPTSOURCE" = "$__NEEDSOME_HOME_SCRIPTSOURCE" ]; then
+	. ${NEEDSOME_INIT_HOME}/lib/logging
+	. ${NEEDSOME_INIT_HOME}/lib/colored
+	. ${NEEDSOME_INIT_HOME}/lib/extended-status
+
+	for m in $(ls "$NEEDSOME_HOME" | grep -e "need-some-[^-]*.bash" | sed -e 's/need-some-\(.*\)\.bash/\1/' ); do
+		var="NEEDSOME_$(echo "$m" | tr "a-z" "A-Z")_HOME"
+		if [ ! -v "$var" ]; then
+			export "$var"="${NEEDSOME_HOME}/need-some-${m}.bash/"
+		fi
+	done
+else
+	. $__NEEDSOME_HOME_SCRIPTSOURCE
+fi
 
