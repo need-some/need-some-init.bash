@@ -7,7 +7,7 @@ _need-some_ is a collection of small yet useful functions.
 
 The init package provides the basis and bootstrapping for the need-some packages.
 
-Installation
+## Installation
 Please download the init package and all packages you want to install to a source location
 
 The default installation assumes the following directories which can be set individually:
