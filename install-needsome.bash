@@ -88,6 +88,7 @@ while [ $# -gt 0 ]; do
 	cp -a "$dir"/src/* "$lib/$pack/"
 	cp -a "$dir"/LICENSE "$lib/$pack/"
 	cp -a "$dir"/README.* "$lib/$pack/"
+	cp -a "$dir"/NEEDSOME-VERSION "$lib/$pack/" || echo "no version file"
 	for file in "$lib/$pack/bin"/*; do
 		if [ "$(basename "$file")" = "*" ]; then
 			echo "no bin files in $lib/$pack"

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+. need-some-init
+
+function show {
+	init_extended_status
+	state="$(< "$1/NEEDSOME-VERSION")"
+	level="OK"
+	set_extended_status "$level" "$state" "$1"
+
+	close_extended_status
+}
+
+for e in $(set | grep -e "^NEEDSOME_.*_HOME=" ); do
+	n="$(echo $e | cut -d "=" -f 1 | sed -e 's/^NEEDSOME_//' | sed -e 's/_HOME$//' | tr "A-Z" "a-z")"
+	v="$(echo $e | cut -d "=" -f 2)"
+	if [ -e "$v/NEEDSOME-VERSION" ]; then
+		call_extended_status "need-some package $n" show "$v"
+	fi
+done
+
+report_extended_status
+
